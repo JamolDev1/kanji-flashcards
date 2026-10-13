@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="format-detection" content="telephone=no">
+<title>Kanji kartalar</title>
+<style>
+:root{--bg:#f3f1ec;--card:#fbfaf7;--back:#e8ecf3;--ink:#1c2233;--sub:#5b6377;--accent:#2b4a8a;--line:#cfd3dc;color-scheme:light dark}
+@media (prefers-color-scheme:dark){:root{--bg:#14171f;--card:#1d212c;--back:#232a3b;--ink:#eceef4;--sub:#9aa3b8;--accent:#8fb0f2;--line:#33394a}}
+*{box-sizing:border-box}
+html,body{min-height:100%;margin:0;-webkit-text-size-adjust:100%;}
+body{min-height:100vh;min-height:100dvh;background:var(--bg);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;display:flex;justify-content:center;padding:max(16px,env(safe-area-inset-top)) 16px max(16px,env(safe-area-inset-bottom));-webkit-tap-highlight-color:transparent}
+main{width:100%;max-width:440px;display:flex;flex-direction:column;gap:14px}
+.top{display:flex;justify-content:space-between;align-items:center;font-size:14px;color:var(--sub)}
+.bar{height:3px;background:var(--line);border-radius:2px;overflow:hidden}
+.bar i{display:block;height:100%;background:var(--accent);width:0;transition:width .25s}
+.scene{perspective:1100px;height:min(60vh,380px);height:min(60dvh,380px);min-height:240px;cursor:pointer;touch-action:manipulation;-webkit-user-select:none;user-select:none}
+.inner{position:relative;width:100%;height:100%;transition:transform .45s;-webkit-transform-style:preserve-3d;transform-style:preserve-3d}
+.scene.flip .inner{transform:rotateY(180deg)}
+.face{position:absolute;inset:0;backface-visibility:hidden;-webkit-backface-visibility:hidden;border:1px solid var(--line);border-radius:14px;background:var(--card);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;padding:18px;text-align:center}
+.back{transform:rotateY(180deg);background:var(--back)}
+.kanji{font-family:"Hiragino Mincho ProN","Yu Mincho","Noto Serif JP","MS Mincho",serif;font-weight:500;line-height:1.25;word-break:break-all}
+.hint{font-size:13px;color:var(--sub)}
+.read{font-size:28px;font-weight:500;word-break:break-all}
+.tr{font-size:22px;color:var(--accent)}
+.pos{font-size:13px;color:var(--sub)}
+.row{display:flex;gap:10px}
+button{flex:1;font:inherit;font-size:16px;padding:13px;min-height:44px;touch-action:manipulation;-webkit-appearance:none;appearance:none;border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:10px;cursor:pointer}
+button:hover{border-color:var(--accent)}
+button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+select{font:inherit;font-size:16px;padding:8px;max-width:58%;-webkit-appearance:auto;border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:10px}
+button.sm{flex:1;font-size:13px;padding:8px 12px}
+@media (prefers-reduced-motion:reduce){.inner,.bar i{transition:none}}
+</style>
+</head>
+<body>
+<main>
+  <div class="top"><span id="count"></span><select id="setsel" aria-label="To'plam"><option value="all">Hammasi (117)</option><option value="1">1-qism (51)</option><option value="2">2-qism (66)</option></select></div>
+  <div class="row"><button class="sm" id="shuf">Aralashtirish</button><button class="sm" id="reset">Tartibga qaytarish</button></div>
+  <div class="bar"><i id="fill"></i></div>
+  <div class="scene" id="scene" tabindex="0" role="button" aria-label="Kartani aylantirish">
+    <div class="inner">
+      <div class="face"><div class="kanji" id="front"></div><div class="hint">Aylantirish uchun bosing</div></div>
+      <div class="face back"><div class="read" id="read"></div><div class="tr" id="tr"></div><div class="pos" id="pos"></div></div>
+    </div>
+  </div>
+  <div class="row"><button id="prev">Oldingi</button><button id="next">Keyingi</button></div>
+  <div class="hint" style="text-align:center">Klaviatura: ← → almashtirish, bo'sh joy aylantirish</div>
+</main>
+<script>
+var set1=[
+["完了","かんりょう","ot / o'timsiz fe'l","tamom / tugatmoq"],
+["手続き","てつづき","ot","rasmiylashtirish"],
+["返却","へんきゃく","ot / o'timli fe'l","qaytarish / qaytarmoq"],
+["貸し出し","かしだし","ot","qarzga olish"],
+["発行","はっこう","ot / o'timli fe'l","nashr / nashr qilmoq"],
+["再発行","さいはっこう","ot / o'timli fe'l","qayta nashr / qayta nashr qilmoq"],
+["可能","かのう","ot / な-sifati","imkoniyat"],
+["状況","じょうきょう","ot","holat"],
+["可笑しい","おかしい","い-sifati","g'alati"],
+["開館","かいかん","ot / o'timsiz fe'l","ochilish / ochilmoq"],
+["閉館","へいかん","ot / o'timsiz fe'l","yopilish / yopilmoq"],
+["休館","きゅうかん","ot / o'timsiz fe'l","yopiq bo'lish / yopiq bo'lmoq"],
+["休館日","きゅうかんび","ot","yopiq kun"],
+["平日","へいじつ","ot","ish kunlari"],
+["祝日","しゅくじつ","ot","bayram kunlari"],
+["年末年始","ねんまつねんし","ot","yil oxiri va yil boshi"],
+["案内","あんない","ot / o'timli fe'l","qo'llanma / yo'l-yo'riq"],
+["翌日","よくじつ","ot","ertasi kun"],
+["前日","ぜんじつ","ot","arafa / bir kun oldin"],
+["使用","しよう","ot / o'timli fe'l","foydalanish"],
+["内容","ないよう","ot","mazmun"],
+["児童","じどう","ot","yosh bola"],
+["大人","おとな","ot","voyaga yetgan"],
+["都市","とし","ot","shahar"],
+["市民","しみん","ot","shahar aholisi"],
+["なお","なお","bog'lovchi / ravish","ustiga-ustak, yana"],
+["ただし","ただし","bog'lovchi","ammo"],
+["ただ","ただ","ot / ravish / bog'lovchi","tekin / oddiy / faqat"],
+["工事","こうじ","ot","qurilish"],
+["用紙","ようし","ot","varaq / blank"],
+["記入","きにゅう","ot / o'timli fe'l","to'ldirmoq"],
+["連絡先","れんらくさき","ot","murojaat uchun ma'lumotlar"],
+["提出","ていしゅつ","ot / o'timli fe'l","taqdim qilish"],
+["窓口","まどぐち","ot","qabul darchasi"],
+["や","や","qo'shimcha","va"],
+["預かる","あずかる","o'timli fe'l","saqlashga olmoq"],
+["預ける","あずける","o'timli fe'l","saqlashga bermoq"],
+["変更","へんこう","ot / o'timli fe'l","o'zgarish"],
+["変換","へんかん","ot / o'timli fe'l","shakl o'zgarishi"],
+["開発","かいはつ","ot / o'timli fe'l","rivojlanish"],
+["身分","みぶん","ot","kelib chiqish"],
+["身分証明書","みぶんしょうめいしょ","ot","shaxsni tasdiqlovchi guvohnoma"],
+["塩","しお","ot","tuz"],
+["報告","ほうこく","ot","hisobot"],
+["報告書","ほうこくしょ","ot","yozma hisobot"],
+["鉄","てつ","ot","temir"],
+["打つ","うつ","o'timli fe'l","urmoq, zarba bermoq"],
+["追いかける","おいかける","o'timli fe'l","quvlamoq"],
+["来店","らいてん","ot / o'timsiz fe'l","do'kon yoki kafega kelmoq"],
+["誠に","まことに","ravish","chin dildan / haqiqatan"],
+["ポスト","ポスト","ot","pochta qutisi / quti"]
+];
+var set2=[
+["宅配便","たくはいびん","ot","uyga yetkazib berish"],
+["届け物","とどけもの","ot","yetkazilgan tovar / jo'natma"],
+["商品","しょうひん","ot","mahsulot"],
+["販売","はんばい","ot / o'timli fe'l","sotuv / savdo"],
+["通信販売","つうしんはんばい","ot","onlayn savdo"],
+["配達","はいたつ","ot / o'timli fe'l","yetkazish / yetkazib bermoq"],
+["ハイヒール","ハイヒール","ot","baland poshna"],
+["スニーカー","スニーカー","ot","krossovka"],
+["ブーツ","ブーツ","ot","etik"],
+["気付く","きづく","o'timsiz fe'l","sezmoq"],
+["気になる","きになる","o'timsiz fe'l","tashvishlanmoq / xavotirlanmoq"],
+["気にする","きにする","o'timli fe'l","bezovta bo'lmoq / qayg'urmoq"],
+["気に入る","きにいる","o'timsiz fe'l","ma'qul bo'lmoq / yoqtirmoq"],
+["思い出す","おもいだす","o'timli fe'l","eslamoq"],
+["きつい","きつい","い-sifat","qattiq / kuchli / og'ir / tor"],
+["汚れる","よごれる","o'timsiz fe'l","kir bo'lmoq"],
+["汚れ","よごれ","ot","kir / dog'"],
+["返品","へんぴん","ot / o'timli fe'l","mahsulotni qaytarib berish"],
+["交換","こうかん","ot / o'timli fe'l","ayirboshlash / (mahsulotni) almashtirish"],
+["ニューヨーク","ニューヨーク","ot","Nyu-York"],
+["自由の女神","じゆうのめがみ","ot","Ozodlik haykali"],
+["浮かぶ","うかぶ","o'timsiz fe'l","suzmoq / qalqib chiqmoq / xayoliga kelmoq"],
+["箱根","はこね","ot","Hakone (onsenlari bilan mashhur shahar)"],
+["相手","あいて","ot","raqib / sherik"],
+["解決","かいけつ","ot / o'timli fe'l","hal qilmoq"],
+["信じる","しんじる","o'timli fe'l","ishonmoq"],
+["信頼","しんらい","ot / o'timli fe'l","ishonch / ishonmoq"],
+["信用","しんよう","ot / o'timli fe'l","ishonish / ishonchini qozonish"],
+["秘密","ひみつ","ot","sir"],
+["教科書","きょうかしょ","ot","darslik"],
+["日常","にちじょう","ot","kundalik / odatiy"],
+["食材","しょくざい","ot","masalliq"],
+["まるで","まるで","ravish","xuddi"],
+["人形","にんぎょう","ot","qo'g'irchoq"],
+["落ち込む","おちこむ","o'timsiz fe'l","tushkunlikka tushmoq"],
+["甘える","あまえる","o'timsiz fe'l","erkalanmoq"],
+["たとえ","たとえ","ot","masalan / misol uchun"],
+["真夏","まなつ","ot","yozning o'rtasi / yozgi chilla"],
+["真冬","まふゆ","ot","qishning o'rtasi / qishki chilla"],
+["牛","うし","ot","sigir"],
+["兎","うさぎ","ot","quyon"],
+["鼠","ねずみ","ot","sichqon"],
+["猿","さる","ot","maymun"],
+["鬼","おに","ot","shayton"],
+["恐ろしい","おそろしい","い-sifat","qo'rqinchli / vahimali"],
+["恐れる","おそれる","o'timsiz fe'l","qo'rqmoq"],
+["不満","ふまん","ot / な-sifat","qoniqarsiz / qoniqmaslik"],
+["満足","まんぞく","ot / o'timsiz fe'l / な-sifat","qoniqish / qoniqmoq"],
+["条件","じょうけん","ot","shart"],
+["満たす","みたす","o'timli fe'l","qoniqmoq / to'ldirmoq"],
+["について","について","turg'un birikma","haqida"],
+["異なる","ことなる","o'timsiz fe'l","farq qilmoq"],
+["休憩","きゅうけい","ot / o'timsiz fe'l","tanaffus / dam olmoq"],
+["給料","きゅうりょう","ot","maosh"],
+["タグ","タグ","ot","etiketka / yorliq"],
+["理由","りゆう","ot","sabab"],
+["結果","けっか","ot","natija"],
+["含む","ふくむ","o'timli fe'l","o'z ichiga olmoq"],
+["納品","のうひん","ot / o'timli fe'l","(mahsulot) yetkazib berish / yetkazib bermoq"],
+["納品書","のうひんしょ","ot","yetkazib berish varaqasi"],
+["あるいは","あるいは","ravish / bog'lovchi","yoki"],
+["限る","かぎる","o'timli / o'timsiz fe'l","cheklamoq"],
+["高画質","こうがしつ","ot","yuqori aniqlikdagi tasvir"],
+["コーチ","コーチ","ot","murabbiy"],
+["胸","むね","ot","ko'krak, qalb"],
+["入社","にゅうしゃ","ot / o'timsiz fe'l","kompaniyaga ishga kirmoq"]
+];
+var sets={"1":set1,"2":set2,"all":set1.concat(set2)};
+var cur="all",deck,i=0,sc=document.getElementById('scene');
+function load(name){
+  cur=name;deck=sets[name].slice();i=0;
+  try{var s=parseInt(localStorage.getItem('kanji_i_'+cur),10);if(s>=0&&s<deck.length)i=s}catch(e){}
+}
+try{var c=localStorage.getItem('kanji_set');if(c&&sets[c])cur=c}catch(e){}
+document.getElementById('setsel').value=cur;
+load(cur);
+function sz(t){var n=t.length;return n<=2?96:n<=4?64:n<=6?44:32}
+function render(){
+  var d=deck[i],f=document.getElementById('front');
+  f.textContent=d[0];f.style.fontSize=sz(d[0])+'px';
+  document.getElementById('read').textContent=d[1];
+  document.getElementById('pos').textContent=d[2];
+  document.getElementById('tr').textContent=d[3];
+  document.getElementById('count').textContent=(i+1)+' / '+deck.length;
+  document.getElementById('fill').style.width=((i+1)/deck.length*100)+'%';
+  try{localStorage.setItem('kanji_i_'+cur,i);localStorage.setItem('kanji_set',cur)}catch(e){}
+}
+function go(n){
+  var was=sc.classList.contains('flip');
+  sc.classList.remove('flip');
+  i=(i+n+deck.length)%deck.length;
+  if(was){setTimeout(render,220)}else{render()}
+}
+function flip(){sc.classList.toggle('flip')}
+sc.addEventListener('click',flip);
+document.getElementById('next').onclick=function(){go(1)};
+document.getElementById('prev').onclick=function(){go(-1)};
+document.getElementById('setsel').onchange=function(){sc.classList.remove('flip');load(this.value);render()};
+document.getElementById('reset').onclick=function(){deck=sets[cur].slice();i=0;sc.classList.remove('flip');render()};
+document.getElementById('shuf').onclick=function(){
+  for(var k=deck.length-1;k>0;k--){var j=Math.floor(Math.random()*(k+1));var t=deck[k];deck[k]=deck[j];deck[j]=t}
+  i=0;sc.classList.remove('flip');render();
+};
+document.addEventListener('keydown',function(e){
+  if(e.key==='ArrowRight')go(1);
+  else if(e.key==='ArrowLeft')go(-1);
+  else if(e.key===' '&&e.target.tagName!=='BUTTON'){e.preventDefault();flip()}
+});
+render();
+</script>
+</body>
+</html>
